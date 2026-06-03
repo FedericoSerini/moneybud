@@ -77,8 +77,11 @@ export class SyncEngine {
 
     const credsRaw = localStorage.getItem(DEVICE_CREDS_KEY)
     this.creds = credsRaw ? (JSON.parse(credsRaw) as DeviceCreds) : null
-    const clockRaw = localStorage.getItem(SYNC_CLOCK_KEY)
-    this.clock = clockRaw ? (JSON.parse(clockRaw) as JHLC) : ZERO_HLC
+    // Always start from ZERO_HLC so the initial pull returns all server ops.
+    // After a page reload the in-memory state is gone; the stored cursor may be
+    // ahead of ops that were pushed in a previous session (server new_clock > op ts),
+    // so using it would cause those ops to be silently skipped.
+    this.clock = ZERO_HLC
     const queueRaw = localStorage.getItem(SYNC_QUEUE_KEY)
     this.queue = queueRaw ? (JSON.parse(queueRaw) as CRDTOp[]) : []
 
