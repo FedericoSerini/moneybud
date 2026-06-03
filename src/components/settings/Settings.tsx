@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Save, Eye, EyeOff, Trash2, AlertTriangle, Download, Upload, Bell } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import { formatCurrency } from '../../utils/format'
@@ -9,6 +9,8 @@ import { Input, Select } from '../ui/Input'
 export function Settings() {
   const { state, updateSettings } = useApp()
   const [form, setForm] = useState({ ...state.settings })
+
+  useEffect(() => { setForm({ ...state.settings }) }, [state.settings])
   const [showKey, setShowKey] = useState(false)
   const [saved, setSaved] = useState(false)
 
