@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply text-slate-100 font-sans;
+    background: linear-gradient(145deg, #040d12 0%, #061a20 50%, #0a1a10 100%);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #040d12; }
+  ::-webkit-scrollbar-thumb { background: #1a3a42; border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: #2a4a52; }
+}
+
+@layer utilities {
+  .font-mono { font-family: 'JetBrains Mono', monospace; }
+}
+
+@layer components {
+  .glass {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    @apply bg-white/[0.04] border border-white/[0.08];
+  }
+  .glass-emerald {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    @apply bg-accent/[0.06] border border-accent/[0.18];
+  }
+  .glass-gold {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    @apply bg-gold/[0.05] border border-gold/[0.18];
+  }
+  .glass-danger {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    @apply bg-red-500/[0.05] border border-red-500/[0.15];
+  }
+  .glass-info {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    @apply bg-blue-500/[0.05] border border-blue-500/[0.15];
+  }
+}
