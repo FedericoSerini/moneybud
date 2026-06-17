@@ -49,7 +49,10 @@ export function Header() {
 
   return (
     <header className="h-14 glass !rounded-none border-b border-white/[0.05] flex items-center justify-between px-5 sticky top-0 z-10">
-      <h2 className="text-sm font-bold text-white tracking-tight">{title}</h2>
+      <div className="flex items-center gap-2">
+        <h2 className="text-sm font-bold text-white tracking-tight">{title}</h2>
+        <span className="text-[10px] font-mono text-slate-600">v{__APP_VERSION__}</span>
+      </div>
 
       <div className="flex items-center gap-2">
         {/* Monthly balance pill */}

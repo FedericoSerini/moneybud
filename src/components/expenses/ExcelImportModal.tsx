@@ -27,6 +27,7 @@ interface ParsedRow {
   importHash: string
   duplicate: boolean
   matchedFixedExpense?: string
+  ignored: boolean
 }
 
 function parseItalianDate(raw: unknown): string {
@@ -94,6 +95,11 @@ function suggestIncomeCategory(description: string): VariableIncomeCategory {
   return 'altro'
 }
 
+function isLiquidityTransfer(description: string): boolean {
+  const d = description.toUpperCase()
+  return /GIROCONTO|GIRO FONDI|GIRO CONTO|BONIFICO A SE STESSO|BONIFICO A ME STESSO|RICARICA CONTO|TRASFERIMENTO INTERNO|DIRECTA SIM|SPESE DOMESTICHE|LIBRETTO/.test(d)
+}
+
 // Nota: questa funzione è una semplice euristica basata sul nome della spesa fissa e potrebbe non essere sempre accurata. L'obiettivo è solo identificare potenziali corrispondenze per avvisare l'utente, che può poi decidere se deselezionare o meno.
 function suggestFixedExpense(description: string): string | undefined {
   if (/AFFITTO|MUTUO|MUTUI|ADDEBITO RATA FINANZIAMENTO/.test(description.toUpperCase())) return 'mutuo'
@@ -134,6 +140,7 @@ function buildRow(
   const duplicate = existingHashes.has(hash) || seenInFile.has(hash)
   seenInFile.add(hash)
   const matchedFixedExpense = type === 'expense' ? matchFixedExpense(description, fixedExpenses) : undefined
+  const ignored = isLiquidityTransfer(description)
   return {
     id,
     date,
@@ -142,10 +149,11 @@ function buildRow(
     type,
     expenseCategory: type === 'expense' ? suggestExpenseCategory(description) : 'altro',
     incomeCategory: type === 'income' ? suggestIncomeCategory(description) : 'altro',
-    selected: !duplicate && !matchedFixedExpense,
+    selected: !duplicate && !matchedFixedExpense && !ignored,
     importHash: hash,
     duplicate,
     matchedFixedExpense,
+    ignored,
   }
 }
 
@@ -361,6 +369,7 @@ export function ExcelImportModal({ open, onClose, existingHashes, fixedExpenses,
   const incomeCount        = rows.filter((r) => r.selected && r.type === 'income').length
   const duplicateCount     = rows.filter((r) => r.duplicate).length
   const fixedMatchCount    = rows.filter((r) => r.matchedFixedExpense && !r.duplicate).length
+  const ignoredCount       = rows.filter((r) => r.ignored && !r.duplicate).length
 
   return (
     <Modal open={open} onClose={handleClose} title="Importa transazioni" size="lg">
@@ -427,6 +436,17 @@ export function ExcelImportModal({ open, onClose, existingHashes, fixedExpenses,
             <span>
               <strong>{fixedMatchCount}</strong> transazion{fixedMatchCount === 1 ? 'e sembra corrispondere' : 'i sembrano corrispondere'} a una spesa fissa già registrata — deselezionat{fixedMatchCount === 1 ? 'a' : 'e'} per evitare doppio conteggio.
               Verifica il badge <span className="inline-flex items-center px-1 py-0.5 rounded text-[10px] font-medium bg-blue-500/20 text-blue-300 border border-blue-500/30">spesa fissa</span> e seleziona manualmente se si tratta di importi aggiuntivi.
+            </span>
+          </div>
+        )}
+
+        {/* Liquidity transfer warning */}
+        {ignoredCount > 0 && rows.length > 0 && (
+          <div className="flex items-start gap-3 p-3 bg-purple-500/10 border border-purple-500/30 rounded-xl text-purple-300 text-sm">
+            <Info size={15} className="mt-0.5 shrink-0" />
+            <span>
+              <strong>{ignoredCount}</strong> transazion{ignoredCount === 1 ? 'e identificata' : 'i identificate'} come scambio di liquidità — deselezionat{ignoredCount === 1 ? 'a' : 'e'} automaticamente.
+              Verifica il badge <span className="inline-flex items-center px-1 py-0.5 rounded text-[10px] font-medium bg-purple-500/20 text-purple-300 border border-purple-500/30">liquidità</span> e seleziona manualmente se necessario.
             </span>
           </div>
         )}
@@ -501,6 +521,11 @@ export function ExcelImportModal({ open, onClose, existingHashes, fixedExpenses,
                               title={`Potenziale corrispondenza con la spesa fissa: "${row.matchedFixedExpense}"`}
                             >
                               spesa fissa
+                            </span>
+                          )}
+                          {row.ignored && !row.duplicate && (
+                            <span className="shrink-0 px-1 py-0.5 rounded text-[10px] font-medium bg-purple-500/15 text-purple-400 border border-purple-500/20">
+                              liquidità
                             </span>
                           )}
                         </div>
