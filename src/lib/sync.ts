@@ -48,6 +48,7 @@ export function tickHLC(current: JHLC, deviceId: string): JHLC {
 }
 
 export const DEVICE_CREDS_KEY = 'moneybud-device-creds'
+const FLUSH_BATCH_SIZE = 200
 export const SYNC_QUEUE_KEY = 'moneybud-sync-queue'
 export const SYNC_CLOCK_KEY = 'moneybud-sync-clock'
 
@@ -143,27 +144,34 @@ export class SyncEngine {
   async flush(): Promise<void> {
     if (this.flushing || this.queue.length === 0 || !this.creds || !navigator.onLine) return
     this.flushing = true
-    const ops = [...this.queue]
-    const msg: SyncMessage = {
-      app_id: this.appId,
-      user_id: this.userId,
-      dataset_id: 'moneybud',
-      clock: this.clock,
-      ops,
-      client_schema_version: 1,
+    try {
+      // Send in batches: a big import queues thousands of ops, and a single
+      // body exceeds the server/ingress request size limit (413).
+      while (this.queue.length > 0) {
+        const ops = this.queue.slice(0, FLUSH_BATCH_SIZE)
+        const msg: SyncMessage = {
+          app_id: this.appId,
+          user_id: this.userId,
+          dataset_id: 'moneybud',
+          clock: this.clock,
+          ops,
+          client_schema_version: 1,
+        }
+        const res = await fetch('/api/sync', {
+          method: 'POST',
+          headers: this.syncHeaders(),
+          body: JSON.stringify(msg),
+        })
+        if (!res.ok) return
+        const resp = (await res.json()) as SyncResponse
+        this.clock = resp.new_clock
+        localStorage.setItem(SYNC_CLOCK_KEY, JSON.stringify(this.clock))
+        this.queue = this.queue.filter(q => !ops.includes(q))
+        localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(this.queue))
+      }
+    } finally {
+      this.flushing = false
     }
-    const res = await fetch('/api/sync', {
-      method: 'POST',
-      headers: this.syncHeaders(),
-      body: JSON.stringify(msg),
-    })
-    if (!res.ok) { this.flushing = false; return }
-    const resp = (await res.json()) as SyncResponse
-    this.clock = resp.new_clock
-    localStorage.setItem(SYNC_CLOCK_KEY, JSON.stringify(this.clock))
-    this.queue = this.queue.filter(q => !ops.includes(q))
-    localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(this.queue))
-    this.flushing = false
   }
 
   async pull(): Promise<SyncResponse> {
